@@ -1,3 +1,0 @@
-# Hi THere
-
-### CHANGES FROM WORKSPACE TEST

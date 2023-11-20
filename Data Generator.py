@@ -7,6 +7,26 @@
 
 # MAGIC %md
 # MAGIC
+# MAGIC # Understanding this notebook
+# MAGIC
+# MAGIC ####Creates a table demo and performs the following operations in this order
+# MAGIC
+# MAGIC 1. Create table (version 0)
+# MAGIC 2. Insert a random number of 10 record batches
+# MAGIC 3. Optimize the table
+# MAGIC 4. Insert another random number of 10 record batches
+# MAGIC 5. Modify the tables properties to enable optimizeWrite 
+# MAGIC 6. Add a single batch of 10 records
+# MAGIC
+# MAGIC ####Creates an answer table
+# MAGIC
+# MAGIC 1. Creates an answer table and populates it with obfuscated answers to a series of questions
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
 # MAGIC #Create a database (schema) and use it
 # MAGIC
 # MAGIC 1. Build a string
@@ -14,25 +34,14 @@
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC
-# MAGIC # Understanding this notebook
-# MAGIC
-# MAGIC Creates a table demo and performs the following operations in this order. 
-# MAGIC
-# MAGIC 1. Create table (version 0)
-# MAGIC
-
-# COMMAND ----------
-
 #####
 # Extract the username, append a name to it
 # And clean out special characters
-# Note this may not run as a job, current_user function may not work on jobs
+# Note this may not run as expected as a scheduleed job, current_user function may not work on jobs
 #####
 username = spark.sql("select current_user()").collect()[0][0]
 #print(username)
-database_name = f"{username}_intro_to_stream_monitoring"
+database_name = f"{username}_basic_delta_test"
 #print(database_name)
 database_name = (database_name.replace("+", "_").replace("@", "_").replace(".", "_"))
 print(database_name)
@@ -55,13 +64,7 @@ spark.sql(f"use {database_name}")
 
 # MAGIC %md
 # MAGIC
-# MAGIC # Verify Database creation and create our source table
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC Define a function to create data in a loop
+# MAGIC ####Define a function to create data in a loop
 
 # COMMAND ----------
 
@@ -94,7 +97,7 @@ spark.sql("create table demo(id int, event_type string, timestamp int)")
 
 # MAGIC %md
 # MAGIC
-# MAGIC # Random number between 1-10 for first batch of insterts
+# MAGIC # Random number between 1-10 for first batch of inserts
 
 # COMMAND ----------
 
@@ -153,14 +156,9 @@ for x in range(random_number):
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC describe history demo;
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC
-# MAGIC # Turn on autoOptimize
+# MAGIC # Turn on optimizeWrite
 # MAGIC
 # MAGIC Auto Optimize takes writes that may be about to create many small files and combines into larger files, per that write
 
@@ -176,15 +174,9 @@ for x in range(random_number):
 # MAGIC
 # MAGIC # Add another batch of records to show behavior of optimizeWrite
 # MAGIC
-# MAGIC Writes before changing the tblproperties may have created one file per slot
+# MAGIC Writes before changing the tblproperties may have created multiple files per 10 record write
 # MAGIC
 # MAGIC Aftter changing the properties you should see one file per write
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC
-# MAGIC Describe history demo;
 
 # COMMAND ----------
 
@@ -197,19 +189,17 @@ df.write.mode("append").saveAsTable("demo")
 # MAGIC
 # MAGIC # At this point our data has been written
 # MAGIC
-# MAGIC Next step is to populate an answer table for the student quiz page next notebook
-
-# COMMAND ----------
-
-# MAGIC %md
+# MAGIC ### Recall the steps
 # MAGIC
-# MAGIC # Next steps
+# MAGIC 1. Create table (version 0)
+# MAGIC 2. Insert a random number of 10 record batches
+# MAGIC 3. Optimize the table
+# MAGIC 4. Insert another random number of 10 record batches
+# MAGIC 5. Modify the tables properties to enable optimizeWrite 
+# MAGIC 6. Add a single batch of 10 records
 # MAGIC
-# MAGIC Write some code that captures the largest version number, 
-# MAGIC Wether it has been vacuumed or optimized
-# MAGIC The largest value for an id etc. 
-# MAGIC
-# MAGIC Hash those into a SQL table in the same location and write the tests
+# MAGIC ### Next Step
+# MAGIC Next step is to populate an answer table for the student quiz page notebook
 
 # COMMAND ----------
 
@@ -219,7 +209,7 @@ df.write.mode("append").saveAsTable("demo")
 # MAGIC
 # MAGIC The answer table with have question ID and hashed answer
 # MAGIC
-# MAGIC The student will have widgest to answer the question and a validation cell
+# MAGIC The student will have a notebook with widgets to answer the question and a validation cell to verify if the answer is correct
 
 # COMMAND ----------
 
@@ -229,9 +219,11 @@ spark.sql("create table answers (id int, solution string)")
 
 # MAGIC %md
 # MAGIC
-# MAGIC # Question 1, can they count rows
+# MAGIC # Question 1:
 # MAGIC
-# MAGIC I know simple right, but just getting the process worked out. 
+# MAGIC ###Count Rows in Table
+# MAGIC
+# MAGIC A basic example to start with 
 
 # COMMAND ----------
 
@@ -239,7 +231,17 @@ spark.sql("create table answers (id int, solution string)")
 # MAGIC
 # MAGIC # Add record to answer table
 # MAGIC
-# MAGIC 1 is count
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+# MAGIC # Note to Students
+# MAGIC
+# MAGIC You could study these if you have issues with the test notebook, but there may be more than one way to get to the solutions.
+# MAGIC
+# MAGIC Best to read the documentation
 
 # COMMAND ----------
 
@@ -248,12 +250,6 @@ value = (df.collect()[0][0])  # Return as local python variable
 sql_string = f"insert into answers values(1, '{value}')" # Build a sql string
 spark.sql(sql_string) # execute the insert into answers
 
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC # CAN THEY GET LATEST VERSION Number?
 
 # COMMAND ----------
 
@@ -269,6 +265,12 @@ spark.sql(sql_string) # execute the insert into answers
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC
+# MAGIC #### Add answer 2 to answers table
+
+# COMMAND ----------
+
 version_num = spark.sql("SELECT sha2(string(version), 256) from (DESCRIBE HISTORY demo limit 1)").collect()[0][0]
 #print(version_num)
 sql_string = f"insert into answers values(2, '{version_num}')" # Build a sql string
@@ -280,6 +282,12 @@ spark.sql(sql_string) # execute the insert into answers
 # MAGIC %md
 # MAGIC
 # MAGIC # Question 3: What version was the Optimize?
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+# MAGIC #### Add answer 3 to answers table
 
 # COMMAND ----------
 
@@ -302,6 +310,12 @@ spark.sql(sql_string) # execute the insert into answers
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC
+# MAGIC #### Add answer 4 to answers table
+
+# COMMAND ----------
+
 # Hardcode optimize to always be zorder by id, 
 # Maybe make that dynamic at some point
 
@@ -315,21 +329,15 @@ spark.sql(sql_string) # execute the insert into answers
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC
-# MAGIC Describe history demo
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC
 # MAGIC # Question 5: which version modified the Table Properties?
 
 # COMMAND ----------
 
-# MAGIC %sql
+# MAGIC %md
 # MAGIC
-# MAGIC Select version from (describe history demo) where operation = "SET TBLPROPERTIES"
+# MAGIC #### Add answer 5 to answers table
 
 # COMMAND ----------
 
@@ -343,79 +351,3 @@ sql_string = f"insert into answers values(5, '{version_num}')" # Build a sql str
 #print(sql_string)
 spark.sql(sql_string) # execute the insert into answers
 
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC # SOME TESTS
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC SELECT * from answers;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC Select count(*) from demo;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC Describe history demo
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC
-# MAGIC Select * from demo;
-
-# COMMAND ----------
-
-# Keep THis
-
-def python_student_test(question_id, answer):
-    if ((spark.sql(f'select sha2("{answer}", 256)')).collect()[0][0]) == spark.sql(f'SELECT solution from answers where id ="{question_id}"').collect()[0][0]:
-        return True
-    else:
-        return False
-
-# COMMAND ----------
-
-python_student_test(2, "8")
-
-# COMMAND ----------
-
-python_student_test(1,"80")
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC
-# MAGIC --SET delta.autoOptimize.autoCompact
-# MAGIC
-# MAGIC -- Turn on auto compact for table
-# MAGIC -- something like 
-# MAGIC -- Alter table demo SET TBLPROPERTIES(delta.autoOptimize.optimizeWrite = true, delta.autoOptimize.autoCompact = true)
-# MAGIC Alter table demo SET TBLPROPERTIES(delta.autoOptimize.optimizeWrite = true, delta.autoOptimize.autoCompact = false)
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC DESCRIBE history demo;
-# MAGIC
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-# MAGIC # ADD some records after changing setting
-# MAGIC
-# MAGIC df = create_data(x)
-# MAGIC   df.write.mode("append").saveAsTable("demo")
-
-# COMMAND ----------
-
-df = create_data(x)
-df.write.mode("append").saveAsTable("demo")
